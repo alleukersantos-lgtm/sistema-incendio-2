@@ -1,0 +1,36 @@
+
+
+<table id="tabelaExtintores">
+</table>
+<input 
+type="text" 
+id="pesquisa"
+placeholder="Pesquisar extintor..."
+onkeyup="pesquisarExtintor()">
+
+function pesquisarExtintor(){
+
+    let valor = document
+    .getElementById("pesquisa")
+    .value
+    .toLowerCase();
+
+    let linhas = document.querySelectorAll("#tabelaExtintores tr");
+
+    linhas.forEach(linha => {
+
+        let textoLinha = linha.innerText.toLowerCase();
+
+        if(textoLinha.includes(valor)){
+
+            linha.style.display = "";
+
+        }else{
+
+            linha.style.display = "none";
+
+        }
+
+    });
+
+}

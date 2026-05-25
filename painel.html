@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel - Sistema de Incêndio</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Topo do painel */
+        header {
+            background: #222;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h3 {
+            margin: 0;
+            font-weight: normal;
+        }
+
+        .btn-sair {
+            background: #d9534f;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-sair:hover {
+            background: #c9302c;
+        }
+
+        /* Container do Menu Principal */
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 25px;
+        }
+
+        /* Menu de Navegação em formato de botões verticais */
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        nav li {
+            margin-bottom: 15px;
+        }
+
+        nav a {
+            display: block;
+            background: #333;
+            color: white;
+            text-decoration: none;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        nav a:hover {
+            background: #444;
+        }
+
+        /* Destaca os botões principais que já configuramos */
+        nav li:nth-child(1) a { background: #007bff; } /* Clientes */
+        nav li:nth-child(1) a:hover { background: #0056b3; }
+
+        nav li:nth-child(2) a { background: #28a745; } /* Extintores */
+        nav li:nth-child(2) a:hover { background: #218838; }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h3 id="Alleukeradm">Carregando usuário...</h3>
+        <button class="btn-sair" onclick="sair()">Sair</button>
+    </header>
+
+    <div class="container">
+        <h2>Menu Principal</h2>
+        <nav>
+            <ul>
+                <li><a href="clientes.html">Clientes</a></li>
+                <li><a href="extintores.html">Extintores</a></li>
+                <li><a href="inspecoes.html">Inspeções</a></li>
+                <li><a href="recargas.html">Recargas</a></li>
+                <li><a href="relatorios.html">Relatórios</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <script>
+        const usuarioLogado = JSON.parse(
+            localStorage.getItem('usuarioLogado')
+        );
+
+        if (!usuarioLogado) {
+            window.location.href = 'login.html';
+        } else {
+            document.getElementById("Alleukeradm").innerText =
+                "Usuário: " + usuarioLogado.usuario + " (" + usuarioLogado.tipo + ")";
+
+            // Bloqueio de segurança que você criou para quem não é Admin
+            if (usuarioLogado.tipo !== 'admin') {
+                // Seleciona elementos de salvar/adicionar caso existam nesta tela no futuro
+                let botoesSalvar = document.querySelectorAll('.salvar');
+                botoesSalvar.forEach(btn => btn.style.display = 'none');
+            }
+        }
+
+        function sair() {
+            localStorage.removeItem('usuarioLogado');
+            window.location.href = 'login.html';
+        }
+    </script>
+
+</body>
+</html>

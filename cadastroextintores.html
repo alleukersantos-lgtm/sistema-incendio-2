@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro de Extintores</title>
+
+<style>
+
+body{
+    font-family:Arial;
+    background:#f4f4f4;
+    margin:0;
+}
+
+menu{
+    background:#222;
+    padding:15px;
+}
+
+menu a{
+    color:white;
+    text-decoration:none;
+    margin-right:20px;
+}
+
+.container{
+    padding:20px;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    border-radius:10px;
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+}
+
+button{
+    margin-top:10px;
+    padding:10px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+.salvar{
+    background:green;
+    color:white;
+}
+
+.editar{
+    background:orange;
+    color:white;
+}
+
+.excluir{
+    background:red;
+    color:white;
+}
+
+table{
+    width:100%;
+    margin-top:20px;
+    border-collapse:collapse;
+    background:white;
+}
+
+th, td{
+    border:1px solid #ddd;
+    padding:10px;
+}
+
+th{
+    background:#333;
+    color:white;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<menu>
+
+<a href="#">Clientes</a>
+
+<a href="#">Extintores</a>
+
+<a href="#">Inspeções</a>
+
+<a href="#">Recargas</a>
+
+</menu>
+
+<div class="container">
+
+<div class="card">
+
+<h2>Cadastro de Extintores</h2>
+
+<input type="text" id="numero" placeholder="Número">
+
+<input type="text" id="tipo" placeholder="Tipo">
+
+<input type="text" id="validade" placeholder="Validade">
+
+<input type="text" id="status" placeholder="Status">
+
+<button class="salvar" onclick="salvarExtintor()">
+Salvar
+</button>
+
+</div>
+
+<table>
+
+<thead>
+
+<tr>
+<th>Número</th>
+<th>Tipo</th>
+<th>Validade</th>
+<th>Status</th>
+<th>Ações</th>
+</tr>
+
+</thead>
+
+<tbody id="tabelaExtintores">
+
+</tbody>
+
+</table>
+
+</div>
+
+<script>
+
+let extintores = [];
+
+let editando = -1;
+
+function salvarExtintor(){
+
+    let numero = document.getElementById("numero").value;
+    let tipo = document.getElementById("tipo").value;
+    let validade = document.getElementById("validade").value;
+    let status = document.getElementById("status").value;
+
+    let dados = {
+        numero,
+        tipo,
+        validade,
+        status
+    };
+
+    if(editando == -1){
+
+        extintores.push(dados);
+
+    }else{
+
+        extintores[editando] = dados;
+        editando = -1;
+
+    }
+
+    limparCampos();
+
+    mostrarTabela();
+
+}
+
+function mostrarTabela(){
+
+    let tabela = document.getElementById("tabelaExtintores");
+
+    tabela.innerHTML = "";
+
+    extintores.forEach((extintor, index) => {
+
+        tabela.innerHTML += `
+
+        <tr>
+
+        <td>${extintor.numero}</td>
+
+        <td>${extintor.tipo}</td>
+
+        <td>${extintor.validade}</td>
+
+        <td>${extintor.status}</td>
+
+        <td>
+
+        <button class="editar"
+        onclick="editarExtintor(${index})">
+        Editar
+        </button>
+
+        <button class="excluir"
+        onclick="excluirExtintor(${index})">
+        Excluir
+        </button>
+
+        </td>
+
+        </tr>
+
+        `;
+
+    });
+
+}
+
+function editarExtintor(index){
+
+    let extintor = extintores[index];
+
+    document.getElementById("numero").value = extintor.numero;
+
+    document.getElementById("tipo").value = extintor.tipo;
+
+    document.getElementById("validade").value = extintor.validade;
+
+    document.getElementById("status").value = extintor.status;
+
+    editando = index;
+
+}
+
+function excluirExtintor(index){
+
+    extintores.splice(index, 1);
+
+    mostrarTabela();
+
+}
+
+function limparCampos(){
+
+    document.getElementById("numero").value = "";
+
+    document.getElementById("tipo").value = "";
+
+    document.getElementById("validade").value = "";
+
+    document.getElementById("status").value = "";
+
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Extintor - Ficha Pública</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7f6;
+            margin: 0;
+            padding: 15px;
+            color: #333;
+        }
+        .Ficha-container {
+            max-width: 450px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        /* Topo com o Status do Extintor */
+        .topo-status {
+            padding: 20px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        .status-valido { background: #28a745; }
+        .status-vencido { background: #dc3545; }
+        .status-atencao { background: #ffc107; color: #333; }
+
+        /* Foto do Extintor */
+        .foto-container {
+            width: 100%;
+            height: 250px;
+            background: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .foto-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .sem-foto {
+            color: #6c757d;
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        /* Conteúdo da Ficha */
+        .conteudo {
+            padding: 20px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #222;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .info-grupo {
+            margin-bottom: 15px;
+        }
+        .info-label {
+            font-size: 12px;
+            color: #777;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .info-valor {
+            font-size: 16px;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        /* Checkbox visual para itens de inspeção */
+        .item-inspecao {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .icone-check {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .check-ok { color: #28a745; }
+        .check-erro { color: #dc3545; }
+
+        .rodape {
+            text-align: center;
+            padding: 15px;
+            font-size: 11px;
+            color: #999;
+            background: #fafafa;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="Ficha-container">
+        
+        <div id="faixaStatus" class="topo-status status-atencao">
+            <span id="txtStatus">Buscando dados na Nuvem...</span>
+        </div>
+
+        <div class="foto-container" id="fotoContainer">
+            <span class="sem-foto">Buscando foto do equipamento...</span>
+        </div>
+
+        <div class="conteudo">
+            <h2 id="viewNumero">Extintor Nº ----</h2>
+
+            <div class="info-grupo">
+                <div class="info-label">Cliente / Localização</div>
+                <div class="info-valor" id="viewCliente">---</div>
+            </div>
+
+            <div class="info-grupo">
+                <div class="info-label">Especificações</div>
+                <div class="info-valor" id="viewEspecificacoes">---</div>
+            </div>
+
+            <div class="info-grupo">
+                <div class="info-label">Vencimento da Carga</div>
+                <div class="info-valor" id="viewValidade">---</div>
+            </div>
+
+            <div class="info-grupo">
+                <div class="info-label">Última Inspeção Realizada</div>
+                <div class="info-valor" id="viewUltimaInspecao">---</div>
+            </div>
+
+            <h3>Itens de Sinalização e Acesso</h3>
+            
+            <div class="item-inspecao">
+                <span id="checkPintura" class="icone-check check-ok">✔</span>
+                <div>
+                    <strong>Pintura de Solo:</strong> 
+                    <span id="txtPintura">---</span>
+                </div>
+            </div>
+
+            <div class="item-inspecao">
+                <span id="checkAcesso" class="icone-check check-ok">✔</span>
+                <div>
+                    <strong>Acesso ao Equipamento:</strong> 
+                    <span id="txtAcesso">---</span>
+                </div>
+            </div>
+
+            <div class="info-grupo" style="margin-top: 20px;">
+                <div class="info-label">Observações Gerais</div>
+                <div class="info-valor" id="viewObservacao" style="font-style: italic; background: #fff8e1; padding: 10px; border-radius: 5px;">
+                    ---
+                </div>
+            </div>
+        </div>
+
+        <div class="rodape">
+            Sistema de Gestão de Incêndio - Inspeção Eletrônica via QR Code
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // SUAS CREDENCIAIS REAIS DO PROJETO CONFIGURADAS EXCLUSIVAMENTE VIA SCRIPT TAG
+        const firebaseConfig = {
+            apiKey: "AIzaSyBwmg-wbxsNYF7qvJY0nwWPSw-hWanaNFg",
+            authDomain: "fire-system-a6239.firebaseapp.com",
+            projectId: "fire-system-a6239",
+            storageBucket: "fire-system-a6239.firebasestorage.app",
+            messagingSenderId: "296937358978",
+            appId: "1:296937358978:web:892b479061bbccbb70569b"
+        };
+
+        // Inicialização global do Banco
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Função principal que lê as informações da nuvem
+        function carregarConsultaPublica() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const numeroExtintor = urlParams.get('num');
+
+            if (!numeroExtintor) {
+                document.getElementById("txtStatus").innerText = "Código Inválido";
+                document.getElementById("faixaStatus").className = "topo-status status-vencido";
+                return;
+            }
+
+            // Acessa sua coleção real "extintores" na nuvem do Firebase
+            db.collection("extintores").where("numero", "==", numeroExtintor).get().then((querySnapshot) => {
+                if (!querySnapshot.empty) {
+                    let extintorEncontrado = querySnapshot.docs[0].data();
+
+                    // Preenche os dados capiturados da nuvem
+                    document.getElementById("viewNumero").innerText = `Extintor Nº ${extintorEncontrado.numero}`;
+                    document.getElementById("viewCliente").innerText = extintorEncontrado.cliente || "Não informado";
+                    document.getElementById("viewEspecificacoes").innerText = `${extintorEncontrado.tipo || 'Não definido'} - ${extintorEncontrado.capacidade || '---'}`;
+                    document.getElementById("viewValidade").innerText = formatarData(extintorEncontrado.validade);
+                    document.getElementById("viewUltimaInspecao").innerText = extintorEncontrado.ultimaInspecao || "Não cadastrada";
+                    document.getElementById("viewObservacao").innerText = extintorEncontrado.observacao || "Nenhuma inconformidade encontrada.";
+
+                    // Itens dinâmicos de conformidade do solo e barreiras
+                    document.getElementById("txtPintura").innerText = extintorEncontrado.pinturaSolo || "Conforme / Visível";
+                    document.getElementById("txtAcesso").innerText = extintorEncontrado.acessoDesobstruido || "Livre e desobstruído";
+
+                    // Exibição da foto
+                    if (extintorEncontrado.fotoUrl) {
+                        document.getElementById("fotoContainer").innerHTML = `<img src="${extintorEncontrado.fotoUrl}" alt="Foto do Extintor">`;
+                    } else {
+                        document.getElementById("fotoContainer").innerHTML = `<span class="sem-foto">Sem foto disponível</span>`;
+                    }
+
+                    // Validação de cores do cabeçalho reativo
+                    let statusLower = (extintorEncontrado.status || '').toLowerCase();
+                    if (statusLower.includes("vencido") || statusLower.includes("reprovado")) {
+                        document.getElementById("txtStatus").innerText = "🚨 EQUIPAMENTO REPROVADO / VENCIDO";
+                        document.getElementById("faixaStatus").className = "topo-status status-vencido";
+                    } else if (statusLower.includes("manutenção") || statusLower.includes("atenção")) {
+                        document.getElementById("txtStatus").innerText = "⚠ REQUER ATENÇÃO / MANUTENÇÃO";
+                        document.getElementById("faixaStatus").className = "topo-status status-atencao";
+                    } else {
+                        document.getElementById("txtStatus").innerText = "🟢 EQUIPAMENTO APROVADO";
+                        document.getElementById("faixaStatus").className = "topo-status status-valido";
+                    }
+
+                } else {
+                    document.getElementById("viewNumero").innerText = "Não Encontrado";
+                    document.getElementById("txtStatus").innerText = "Não Cadastrado no Sistema";
+                    document.getElementById("faixaStatus").className = "topo-status status-vencido";
+                    document.getElementById("fotoContainer").innerHTML = `<span class="sem-foto">Nenhum registro encontrado</span>`;
+                }
+            }).catch((error) => {
+                console.error("Erro ao conectar no banco: ", error);
+                document.getElementById("txtStatus").innerText = "Erro de Conexão";
+                document.getElementById("faixaStatus").className = "topo-status status-vencido";
+            });
+        }
+
+        function formatarData(dataBruta) {
+            if(!dataBruta) return "---";
+            let partes = dataBruta.split("-");
+            if(partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+            return dataBruta;
+        }
+
+        // Executa automaticamente a varredura
+        carregarConsultaPublica();
+    </script>
+</body>
+</html>

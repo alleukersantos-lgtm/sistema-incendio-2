@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Clientes</title>
+
+    <style>
+        body{
+            font-family:Arial;
+            background:#f4f4f4;
+            padding:20px;
+        }
+
+        input, button{
+            padding:10px;
+            margin:5px;
+        }
+
+        table{
+            width:100%;
+            background:white;
+            border-collapse:collapse;
+            margin-top: 20px;
+        }
+
+        td, th{
+            border:1px solid #ccc;
+            padding:10px;
+        }
+
+        th {
+            background: #333;
+            color: white;
+            text-align: left;
+        }
+
+        .salvar { background: green; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .editar { background: orange; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .excluir { background: red; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .extintores-btn { background: blue; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .menu-btn { background: #555; color: white; border: none; padding: 10px; cursor: pointer; }
+    </style>
+</head>
+
+<body>
+
+<h1>Clientes (Nuvem)</h1>
+
+<input id="empresa" placeholder="Empresa">
+<input id="cnpj" placeholder="CNPJ">
+<input id="responsavel" placeholder="Responsável">
+<input id="telefone" placeholder="Telefone">
+
+<button class="salvar" id="btnSalvar" onclick="salvarCliente()">Adicionar</button>
+<button class="menu-btn" onclick="window.location.href='painel.html'">← Menu Inicial</button>
+<br><br>
+
+<input id="pesquisa" placeholder="Pesquisar..." onkeyup="pesquisarCliente()">
+
+<table>
+    <thead>
+        <tr>
+            <th>Empresa</th>
+            <th>CNPJ</th>
+            <th>Responsável</th>
+            <th>Telefone</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody id="tabelaClientes"></tbody>
+</table>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<script>
+    // Configuração com as suas credenciais ativas e unificadas
+    const firebaseConfig = {
+        apiKey: "AIzaSyBwmg-wbxsNYF7qvJY0nwWPSw-hWanaNFg",
+        authDomain: "fire-system-a6239.firebaseapp.com",
+        projectId: "fire-system-a6239",
+        storageBucket: "fire-system-a6239.firebasestorage.app",
+        messagingSenderId: "296937358978",
+        appId: "1:296937358978:web:892b479061bbccbb70569b"
+    };
+
+    // Inicializa o Firebase e o Firestore
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let editandoId = null;
+
+    // Salvar ou atualizar cliente na nuvem
+    async function salvarCliente() {
+        let empresa = document.getElementById("empresa").value.trim();
+        let cnpj = document.getElementById("cnpj").value.trim();
+        let responsavel = document.getElementById("responsavel").value.trim();
+        let telefone = document.getElementById("telefone").value.trim();
+
+        if (!empresa) {
+            alert("Digite o nome da empresa!");
+            return;
+        }
+
+        let dados = { 
+            empresa: empresa, 
+            cnpj: cnpj,
+            responsavel: responsavel, 
+            telefone: telefone
+        };
+
+        try {
+            if (editandoId === null) {
+                // Adiciona um novo documento na coleção "clientes"
+                await db.collection("clientes").add(dados);
+            } else {
+                // Atualiza o documento usando o ID único gerado pelo Firebase
+                await db.collection("clientes").doc(editandoId).update(dados);
+                editandoId = null;
+                document.getElementById("btnSalvar").innerText = "Adicionar";
+            }
+            limparCampos();
+        } catch (error) {
+            console.error("Erro ao salvar dados do cliente: ", error);
+            alert("Erro ao salvar dados na nuvem.");
+        }
+    }
+
+    // Listagem reativa em tempo real (onSnapshot)
+    function mostrarClientes() {
+        let tabela = document.getElementById("tabelaClientes");
+
+        db.collection("clientes").onSnapshot((snapshot) => {
+            tabela.innerHTML = "";
+            snapshot.forEach((doc) => {
+                let cliente = doc.data();
+                let id = doc.id;
+
+                tabela.innerHTML += `
+                <tr>
+                    <td>${cliente.empresa || '-'}</td>
+                    <td>${cliente.cnpj || '-'}</td>
+                    <td>${cliente.responsavel || '-'}</td>
+                    <td>${cliente.telefone || '-'}</td>
+                    <td>
+                        <button class="extintores-btn" onclick="verExtintores('${cliente.empresa}')">Ver Extintores</button>
+                        <button class="editar" onclick="prepararEdicao('${id}', '${cliente.empresa}', '${cliente.cnpj || ""}', '${cliente.responsavel || ""}', '${cliente.telefone || ""}')">Editar</button>
+                        <button class="excluir" onclick="excluirCliente('${id}', '${cliente.empresa}')">Excluir</button>
+                    </td>
+                </tr>`;
+            });
+        }, (error) => {
+            console.error("Erro ao escutar atualizações: ", error);
+        });
+    }
+
+    // Transfere os dados da linha da tabela de volta para os inputs para edição
+    function prepararEdicao(id, empresa, cnpj, responsavel, telefone) {
+        document.getElementById("empresa").value = empresa;
+        document.getElementById("cnpj").value = cnpj;
+        document.getElementById("responsavel").value = responsavel;
+        document.getElementById("telefone").value = telefone;
+
+        editandoId = id;
+        document.getElementById("btnSalvar").innerText = "Atualizar";
+    }
+
+    // Remove o cliente e executa a limpeza em lote (batch) dos extintores atrelados a ele
+    async function excluirCliente(id, nomeEmpresa) {
+        if (confirm(`Tem certeza que deseja excluir a empresa "${nomeEmpresa}"? Todos os extintores dela também serão apagados.`)) {
+            try {
+                // Apaga o registro do cliente
+                await db.collection("clientes").doc(id).delete();
+
+                // Varre e apaga os extintores vinculados
+                let snapshotExtintores = await db.collection("extintores").where("cliente", "==", nomeEmpresa).get();
+                let loteRemocao = db.batch();
+                
+                snapshotExtintores.forEach(doc => {
+                    loteRemocao.delete(doc.ref);
+                });
+                
+                await loteRemocao.commit();
+            } catch (error) {
+                console.error("Erro ao excluir dados do cliente: ", error);
+                alert("Ocorreu um erro ao tentar processar a exclusão.");
+            }
+        }
+    }
+
+    function verExtintores(nomeEmpresa) {
+        localStorage.setItem("clienteSelecionado", nomeEmpresa);
+        window.location.href = "extintores.html";
+    }
+
+    function pesquisarCliente() {
+        let valor = document.getElementById("pesquisa").value.toLowerCase();
+        document.querySelectorAll("#tabelaClientes tr").forEach(linha => {
+            linha.style.display = linha.innerText.toLowerCase().includes(valor) ? "" : "none";
+        });
+    }
+
+    function limparCampos() {
+        document.getElementById("empresa").value = "";
+        document.getElementById("cnpj").value = "";
+        document.getElementById("responsavel").value = "";
+        document.getElementById("telefone").value = "";
+    }
+
+    // Inicializa o ouvinte em tempo real do banco de dados
+    mostrarClientes();
+</script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Extintores do Cliente com QR Code</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f4f4;
+            padding: 20px;
+        }
+        input, select, button {
+            padding: 10px;
+            margin: 5px;
+            box-sizing: border-box;
+        }
+        .inputs-group input, .inputs-group select {
+            width: 100%;
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        td, th {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #333;
+            color: white;
+        }
+        .voltar-btn { background-color: #555; color: white; border: none; cursor: pointer; }
+        .menu-btn { background: #222; color: white; border: none; cursor: pointer; }
+        .salvar { background: green; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .editar { background: orange; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .excluir { background: red; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .qrcode-btn { background: #6f42c1; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        
+        .selecao-cliente-topo {
+            background: #e9e9e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        /* Área onde a câmera vai aparecer no celular */
+        #leitor-camera {
+            width: 100%;
+            max-width: 400px;
+            margin: 10px auto;
+            border: 2px dashed #6f42c1;
+            border-radius: 8px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <button class="voltar-btn" onclick="window.location.href='clientes.html'">← Voltar para Clientes</button>
+    <button class="menu-btn" onclick="window.location.href='painel.html'">← Menu Inicial</button>
+
+    <div class="selecao-cliente-topo">
+        <label style="font-weight: bold;">Visualizando dados de: </label>
+        <select id="selecionarClienteMenu" onchange="mudarClienteAtalho(this.value)">
+            <option value="">Carregando empresas...</option>
+        </select>
+    </div>
+
+    <h3>Cadastrar Novo Extintor</h3>
+    
+    <button class="qrcode-btn" onclick="ligarCamera()">📷 Escanear QR Code do Extintor</button>
+    
+    <div id="leitor-camera"></div>
+
+    <div class="inputs-group">
+        <input type="text" id="numero" placeholder="Número do Extintor (Ou escaneie acima)">
+
+        <select id="tipo">
+            <option value="" disabled selected>Selecione o Tipo de Extintor</option>
+            <option value="Água (H2O)">Água (H2O)</option>
+            <option value="Pó Químico Seco (PQS) - BC">Pó Químico Seco (PQS) - BC</option>
+            <option value="Pó Químico Seco (PQS) - ABC">Pó Químico Seco (PQS) - ABC</option>
+            <option value="Dióxido de Carbono (CO2)">Dióxido de Carbono (CO2)</option>
+            <option value="Espuma Mecânica">Espuma Mecânica</option>
+        </select>
+
+        <select id="capacidade">
+            <option value="" disabled selected>Selecione a Capacidade</option>
+            <option value="2 kg">2 kg</option>
+            <option value="4 kg">4 kg</option>
+            <option value="6 kg">6 kg</option>
+            <option value="8 kg">8 kg</option>
+            <option value="12 kg">12 kg</option>
+            <option value="10 Litros">10 Litros</option>
+            <option value="50 kg (Carreta)">50 kg (Carreta)</option>
+        </select>
+
+        <input id="validade" type="date">
+        <input type="text" id="status" placeholder="Status (Ex: Aprovado, Vencido)">
+        <input type="text" id="observacao" placeholder="Observações">
+    </div>
+
+    <br>
+    <button class="salvar" id="btnSalvar" onclick="adicionarExtintor()">Adicionar Extintor</button>
+
+    <table id="tabelaFiltro">
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Tipo</th>
+                <th>Capacidade</th>
+                <th>Validade da Carga</th>
+                <th>Status</th>
+                <th>Observações</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaExtintores"></tbody>
+    </table>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Configurações unificadas do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBwmg-wbxsNYF7qvJY0nwWPSw-hWanaNFg",
+            authDomain: "fire-system-a6239.firebaseapp.com",
+            projectId: "fire-system-a6239",
+            storageBucket: "fire-system-a6239.firebasestorage.app",
+            messagingSenderId: "296937358978",
+            appId: "1:296937358978:web:892b479061bbccbb70569b"
+        };
+
+        // Inicializando instâncias globais
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let clienteAtual = localStorage.getItem("clienteSelecionado");
+        let editandoId = null; // Agora rastreia o ID interno do documento do Firebase
+        let html5QrcodeScanner;
+
+        // CÂMERA: Ativa a varredura do QR Code
+        function ligarCamera() {
+            const areaCamera = document.getElementById("leitor-camera");
+            areaCamera.style.display = "block";
+
+            html5QrcodeScanner = new Html5QrcodeScanner("leitor-camera", { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 } 
+            });
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            document.getElementById("numero").value = decodedText;
+            if (navigator.vibrate) navigator.vibrate(200);
+            html5QrcodeScanner.clear();
+            document.getElementById("leitor-camera").style.display = "none";
+        }
+
+        function onScanFailure(error) { /* Silencioso */ }
+
+        // BUSCA CLIENTES DIRETO DO FIREBASE NUVEM
+        function carregarListaDeClientes() {
+            let selectMenu = document.getElementById("selecionarClienteMenu");
+            
+            db.collection("clientes").onSnapshot((snapshot) => {
+                selectMenu.innerHTML = "";
+                if(snapshot.empty) {
+                    selectMenu.innerHTML = `<option value="">Nenhum cliente cadastrado</option>`;
+                    return;
+                }
+                
+                snapshot.forEach((doc) => {
+                    let data = doc.data();
+                    let opcao = document.createElement("option");
+                    opcao.value = data.empresa;
+                    opcao.text = data.empresa;
+                    if(data.empresa === clienteAtual) opcao.selected = true;
+                    selectMenu.appendChild(opcao);
+                });
+
+                if (!clienteAtual && snapshot.docs.length > 0) {
+                    clienteAtual = snapshot.docs[0].data().empresa;
+                    localStorage.setItem("clienteSelecionado", clienteAtual);
+                }
+                mostrarExtintores();
+            });
+        }
+
+        function mudarClienteAtalho(novoCliente) {
+            clienteAtual = novoCliente;
+            localStorage.setItem("clienteSelecionado", novoCliente);
+            mostrarExtintores();
+        }
+
+        // SALVAR OU ATUALIZAR EXTINTOR NA NUVEM
+        async function adicionarExtintor() {
+            let numero = document.getElementById("numero").value.trim();
+            let tipo = document.getElementById("tipo").value;
+            let capacity = document.getElementById("capacidade").value;
+            let validade = document.getElementById("validade").value;
+            let status = document.getElementById("status").value.trim();
+            let observacao = document.getElementById("observacao").value.trim();
+
+            if(!clienteAtual) { alert("Cadastre ou selecione um cliente primeiro!"); return; }
+            if(!numero) { alert("Informe o número do extintor!"); return; }
+            if(!tipo || !capacity) { alert("Selecione o Tipo e a Capacidade!"); return; }
+
+            // Pega a data atual para registrar o dia da vistoria
+            let hoje = new Date();
+            let ultimaInspecaoFormatada = hoje.toLocaleDateString('pt-BR');
+
+            let dadosExtintor = {
+                cliente: clienteAtual,
+                numero: numero,
+                tipo: tipo,
+                capacidade: capacity,
+                validade: validade,
+                status: status || "Aprovado",
+                observacao: observacao,
+                ultimaInspecao: ultimaInspecaoFormatada
+            };
+
+            try {
+                if (editandoId === null) {
+                    // Novo extintor na nuvem
+                    await db.collection("extintores").add(dadosExtintor);
+                } else {
+                    // Atualiza extintor existente usando ID único do Firestore
+                    await db.collection("extintores").doc(editandoId).update(dadosExtintor);
+                    editandoId = null;
+                    document.getElementById("btnSalvar").innerText = "Adicionar Extintor";
+                }
+                limparCampos();
+            } catch (error) {
+                console.error("Erro ao processar salvamento do extintor: ", error);
+                alert("Erro ao gravar dados na nuvem.");
+            }
+        }
+
+        // EXIBE EXTINTORES EM TEMPO REAL FILTRADOS PELO CLIENTE ATUAL
+        function mostrarExtintores() {
+            let tabela = document.getElementById("tabelaExtintores");
+            
+            db.collection("extintores").where("cliente", "==", clienteAtual).onSnapshot((snapshot) => {
+                tabela.innerHTML = "";
+                
+                if (snapshot.empty) {
+                    tabela.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhum extintor cadastrado para este cliente.</td></tr>`;
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    let ext = doc.data();
+                    let id = doc.id;
+                    // Conversão visual rápida de data AAAA-MM-DD para DD/MM/AAAA na tabela
+                    let dataFormatada = ext.validade ? ext.validade.split("-").reverse().join("/") : "-";
+
+                    tabela.innerHTML += `
+                    <tr>
+                        <td>${ext.numero || '-'}</td>
+                        <td>${ext.tipo}</td>
+                        <td>${ext.capacidade}</td>
+                        <td>${dataFormatada}</td>
+                        <td>${ext.status || '-'}</td>
+                        <td>${ext.observacao || '-'}</td>
+                        <td>
+                            <button class="editar" onclick="prepararEd
